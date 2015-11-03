@@ -1,68 +1,84 @@
 
 /*
-  This is a simple code to test BH1750FVI Light senosr
-  communicate using I2C Protocol 
-  this library enable 2 slave device address
-  Main address  0x23 
-  secondary address 0x5C 
-  connect this sensor as following :
-  VCC >>> 3.3V
+  This is a simple sketch to test BH1750FVI Light Sensor
+  which communicates using the I2C Protocol 
+  
+  It writes out the lux value over the serial port
+
+  Connect this sensor as follows:
+  VCC >>> 3.3V or 5V
   SDA >>> A4 
   SCL >>> A5
   addr >> A3
-  Gnd >>>Gnd
-
-  Written By : Mohannad Rawashdeh
+  Gnd >>> Gnd
+  
+  BH1750FVI Sensor Setup 
+  
+  ##### I2C Addresses #####
+  Addr_LOW 0x23 // Device address when address pin LOW
+  Addr_HIGH 0x5C // Device address when address pin High
+   you must connect Addr pin to A3 .
+   
+  ##### Modes ##### 
+  Continuous_H - 1 lx resolution (16 bit), 120ms sampling time
+  Continuous_H2 -  0.5 lx resolution (18 bit), 120ms sampling time
+  Continuous_L - 4 lx resolution (15 bit), 16ms sampling time
+  OneTime_H
+  OneTime_H2
+  OneTime_L
+  
+  Default for Begin() is Addr_LOW and Continuous_H
   
  */
  
- // First define the library :
-
+// The library includes
 #include <Wire.h>
 #include <BH1750FVI.h>
 
+// Pin that LED is connected to
+// Connect LED With 100ohm resistor
+#define LEDPin 13 
 
+// Initialize the BH1750FVI class
 BH1750FVI LightSensor;
 
 
-void setup() {   // put your setup code here, to run once:
-   Serial.begin(9600);
-  LightSensor.begin();
-  /*
- Set the address for this sensor 
- you can use 2 different address
- Device_Address_H "0x5C"
- Device_Address_L "0x23"
- you must connect Addr pin to A3 .
- */
-  LightSensor.SetAddress(Device_Address_H);//Address 0x5C
- // To adjust the slave on other address , uncomment this line
- // lightMeter.SetAddress(Device_Address_L); //Address 0x5C
- //-----------------------------------------------
-  /*
-   set the Working Mode for this sensor 
-   Select the following Mode:
-    Continuous_H_resolution_Mode
-    Continuous_H_resolution_Mode2
-    Continuous_L_resolution_Mode
-    OneTime_H_resolution_Mode
-    OneTime_H_resolution_Mode2
-    OneTime_L_resolution_Mode
-    
-    The data sheet recommanded To use Continuous_H_resolution_Mode
-  */
 
-  LightSensor.SetMode(Continuous_H_resolution_Mode);
+void setup() {   
+  // put your setup code here, to run once:
   
-  Serial.println("Running...");
+  // Start Serial communication
+   Serial.begin(9600);
+ 
+  // Start the light sensor by turning on and initializing it.
+  LightSensor.Begin(Addr_LOW, Continuous_H);
+ 
+  // Sets the measurement time register
+  // This allows for adjusting the sensitivity
+  // It also allows for extension of the sensor's range.
+  //Light.SetMTReg(69);
+  
+  
+  // Scales the sensitivity of the sensor by changing measurement time w/o re-scaling
+  // Increasing the sensitivity accounts for something covering sensor (window)
+  // Decreasing the sensitivity accounts 
+  // The range in sensitivity scaling is 0.45 to 3.68.  Default is 1.00
+  //Light.SetSensitivity(1.00);
+
 }
 
 
 void loop() {
-  // put your main code here, to run repeatedly: 
-  uint16_t lux = LightSensor.GetLightIntensity();// Get Lux value
+  // put your main code here, to run repeatedly:
+  
+  // Get the value in lux.  It returns a float that's significant to 1 or 2 digits
+  float lux = LightSensor.GetLux();// Get Lux value
+  
+  // Print out the lux value
   Serial.print("Light: ");
   Serial.print(lux);
   Serial.println(" lux");
+  
+  // Measure every second
   delay(1000);
 }

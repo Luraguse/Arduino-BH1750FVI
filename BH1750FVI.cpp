@@ -2,79 +2,173 @@
 #include "Arduino.h"
 
 BH1750FVI::BH1750FVI(){  
-  
+
+    // Set defaults for MTReg and Sensitivity on class initiation
+    MTReg = 69;
+    Sensitivity = 1.00;
  }
   
-  void BH1750FVI::begin(void){
-   Wire.begin(); 
-   I2CWriteTo(Power_On ); //Turn it On 
-   pinMode(AddrPin,OUTPUT);
-   digitalWrite(AddrPin,HIGH);
-      
+  void BH1750FVI::Begin(uint8_t Addr, uint8_t Mode){
+
+    // Set the address
+    SetAddress(Addr);
+
+    // Start the I2C bus
+    Wire.begin(); 
+
+    // Power on the sensor
+    PowerOn();
+
+    // Set the mode
+    SetMode(Mode);
+
   }
+
+  void BH1750FVI::PowerOn(void){
+    I2CWrite(Power_On ); // Power on the sensor
+  }
+
   void BH1750FVI::Sleep(void){
-    I2CWriteTo(Power_Down ); //Turn it off , Reset operator won't work in this mode
+    I2CWrite(Power_Down ); //Turn it off , Reset operator won't work in this mode
   }
+
   void BH1750FVI::Reset(void){
-    I2CWriteTo(Power_On ); //Turn it on again
-    I2CWriteTo(reset ); //Reset
+    I2CWrite(Power_On ); //Turn it on again
+    I2CWrite(Reset_Sensor ); //Reset
     
   }
-  void BH1750FVI::SetAddress(uint8_t add){
-    switch (add){
-      case Device_Address_L:
-      address_value=Device_Address_L;
-      digitalWrite(AddrPin,LOW);
-      state=false;
-      break;
-      case Device_Address_H:
-      address_value=Device_Address_H;
-      digitalWrite(AddrPin,HIGH);
-      state=true;
-      break;
+
+  void BH1750FVI::SetAddress(uint8_t Addr){
+
+    // Set the address
+    Address=Addr;
+
+  }
+
+  void BH1750FVI::SetMode(uint8_t Mode){
+
+    // Write the mode to the sensor
+    I2CWrite(Mode);
+
+    // Handle mode-specific changes
+    // Note: delay for enough time to allow the sensor to get a measurement
+    switch(Mode){
+
+        case Continuous_H:
+          Resolution = 1;
+          delay(180);
+          break;
+
+        case Continuous_H2:
+          Resolution = 0.5;
+          delay(180);
+          break;
+
+        case Continuous_L:
+          Resolution = 1;
+          delay(24);      
+          break;
+
+        case OneTime_H:
+          Resolution = 1;
+          delay(180);
+          break;
+
+        case OneTime_H2:
+          Resolution = 0.5;
+          delay(180);
+          break;
+
+        case OneTime_L:  
+          Resolution = 1;
+          delay(24);
+          break;
     }
+  }
+
+  void BH1750FVI::SetMTReg(uint8_t MT){
+
+    // constrain MT to [31, 254]
+    MT = min(max(MT, 31), 254);
     
-  }
-  void BH1750FVI::SetMode(uint8_t MODE){
-    switch(MODE){
-        case Continuous_H_resolution_Mode:
-        break;
-        case Continuous_H_resolution_Mode2:
-        break;
-        case Continuous_L_resolution_Mode:       
-        break;
-        case OneTime_H_resolution_Mode:
-        break;
-        case OneTime_H_resolution_Mode2:
-        break;
-        case OneTime_L_resolution_Mode:  
-        break;
-    }
-    delay(10);
-    I2CWriteTo(MODE);
-  }
-  
-  uint16_t BH1750FVI::GetLightIntensity(void){
-  uint16_t Intensity_value;
-  if(state ==true){
-  Wire.beginTransmission(Device_Address_H);
-  Wire.requestFrom(Device_Address_H, 2);
-  }
-  if(state ==false){
-  Wire.beginTransmission(Device_Address_L);
-  Wire.requestFrom(Device_Address_L, 2);
-  }
-  Intensity_value = Wire.read();
-  Intensity_value <<= 8;
-  Intensity_value |= Wire.read();
-  Wire.endTransmission();
-  Intensity_value=Intensity_value/1.2;
-  return Intensity_value;
+    // Set the MTReg class variable so we can account for it while measuring
+    MTReg = MT;
     
-  }
-  
-  void BH1750FVI::I2CWriteTo(uint8_t DataToSend){
-    Wire.beginTransmission(address_value);
-    Wire.write(DataToSend);
+    // Shift the first 3 bytes of MT to the last 3
+    // Then OR 64 (01000000) to add the 01000 prefix
+    uint8_t highbyte = (MT >> 5) | 64;
+
+    // Get rid of the first 3 bytes in MT by ANDing 31 (00011111)
+    // Then OR 96 (01100000) to add the 011 prefix
+    uint8_t lowbyte = (MT & 31) | 96;
+
+    // Send the two MTReg bytes
+    Wire.beginTransmission(Address);
+    Wire.write(highbyte);
+    Wire.write(lowbyte);
     Wire.endTransmission();
+
+  }
+
+  void BH1750FVI::SetSensitivity(float Sens){
+
+    // Convert sensitivity ratio to MT
+    int MT = round(Sens * 69.0);
+
+    // constrain MT to [31, 254]
+    MT = min(max(MT, 31), 254);
+
+    // Set the Sensitivity class variable by calculating the ratio
+    // Note we use MT/69 here, which might be different from sens
+    Sensitivity = MT / 69.0;
+
+    // Set the Measurement Time to MT
+    SetMTReg(MT);
+
+  }
+  
+  float BH1750FVI::GetLux(void){
+
+    uint16_t Intensity;
+    float lux;
+    
+    // Ask the sensor for two bytes
+    Wire.beginTransmission(Address);
+    Wire.requestFrom((int)Address, 2);
+
+    // Read the two bytes and OR them together for a 16 bit number
+    Intensity = Wire.read();
+    Intensity <<= 8;
+    Intensity |= Wire.read();
+
+    // End the transmission
+    Wire.endTransmission();
+
+    // Check to see if we've changed the sensitivity. 
+    if(Sensitivity != 1.00){
+
+      // According to datasheet, divide by 1.2 & multiply by Resolution
+      // Sensitivity has been changed, so don't re-scale
+      lux = Intensity / 1.2 * Resolution;
+
+    } else {
+
+      // According to datasheet, divide by 1.2 & multiply by Resolution
+      // Rescale to account for Measurement Time change
+      lux = Intensity / 1.2 * Resolution * 69.0 / MTReg;
+
+    }
+
+    // Return a float.  Only to 2 significant digits though
+    return ((long)(lux * 100 ))/ 100.0;
+    
+  }
+  
+  void BH1750FVI::I2CWrite(uint8_t Opcode){
+
+    // Write a byte to the sensor
+    Wire.beginTransmission(Address);
+    Wire.write(Opcode);
+    Wire.endTransmission();
+
   }
