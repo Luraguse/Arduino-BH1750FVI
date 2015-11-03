@@ -29,11 +29,11 @@ The sensor supports either continuous or one-time sampling at various resolution
 
 
 ### Class Setup and Functions ###
-* ** BH1750FVI LightSensor; ** - Create a class instance named LightSensor
-* ** LightSensor.Begin(Addr_LOW, Continuous_H); ** - The default for Begin() is Addr_LOW and Continuous_H
-* ** LightSensor.SetSensitivity(1.00); ** - Changes the sensitivity of the sensor by changing the measurement time without re-scaling the resulting value.  Thus increasing the sensitivity compensates for something partially blocking light to the sensor.  The range in scaling is 0.45 to 3.68.  Default is 1.00
-* ** Light.SetMTReg(69); ** - Sets the measurement time register, which tells the sensor how long to measure for.  SetSensitivity() uses this same process, but doesn't re-scale the result.  Using SetMTReg() results in the same value (re-scaled) but with a different resolution.  The range is 31 to 254 with 69 as the default.  At 254, resolution is 0.11 lx in _H2 modes
-* ** float lux = LightSensor.GetLux(); ** - Gets the light sensor output as a float
+* **BH1750FVI LightSensor;** - Create a class instance named LightSensor
+* **LightSensor.Begin(Addr_LOW, Continuous_H);** - The default for Begin() is Addr_LOW and Continuous_H
+* **LightSensor.SetSensitivity(1.00);** - Changes the sensitivity of the sensor by changing the measurement time without re-scaling the resulting value.  Thus increasing the sensitivity compensates for something partially blocking light to the sensor.  The range in scaling is 0.45 to 3.68.  Default is 1.00
+* **Light.SetMTReg(69);** - Sets the measurement time register, which tells the sensor how long to measure for.  SetSensitivity() uses this same process, but doesn't re-scale the result.  Using SetMTReg() results in the same value (re-scaled) but with a different resolution.  The range is 31 to 254 with 69 as the default.  At 254, resolution is 0.11 lx in _H2 modes
+* **float lux = LightSensor.GetLux();** - Gets the light sensor output as a float
 
 I've increased documentation and added more support for sensitivity and modes, but this was originally written by [Mohannad Rawawashdeh](https://github.com/Genotronex/BH1750FVI_Master)
 
