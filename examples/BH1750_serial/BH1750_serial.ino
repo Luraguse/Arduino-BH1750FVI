@@ -9,7 +9,7 @@
   VCC >>> 3.3V or 5V
   SDA >>> A4 
   SCL >>> A5
-  addr >> A3
+  addr >> Gnd or VCC
   Gnd >>> Gnd
   
   BH1750FVI Sensor Setup 
@@ -17,7 +17,7 @@
   ##### I2C Addresses #####
   Addr_LOW 0x23 // Device address when address pin LOW
   Addr_HIGH 0x5C // Device address when address pin High
-   you must connect Addr pin to A3 .
+
    
   ##### Modes ##### 
   Continuous_H - 1 lx resolution (16 bit), 120ms sampling time
@@ -56,14 +56,14 @@ void setup() {
   // Sets the measurement time register
   // This allows for adjusting the sensitivity
   // It also allows for extension of the sensor's range.
-  //Light.SetMTReg(69);
+  //LightSensor.SetMTReg(69);
   
   
   // Scales the sensitivity of the sensor by changing measurement time w/o re-scaling
   // Increasing the sensitivity accounts for something covering sensor (window)
   // Decreasing the sensitivity accounts 
   // The range in sensitivity scaling is 0.45 to 3.68.  Default is 1.00
-  //Light.SetSensitivity(1.00);
+  //LightSensor.SetSensitivity(1.00);
 
 }
 
